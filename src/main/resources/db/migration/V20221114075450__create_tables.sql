@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS files(
+  id VARCHAR NOT NULL PRIMARY KEY,
+  path VARCHAR NOT NULL,
+  name VARCHAR NOT NULL,
+  created_at TIMESTAMP NOT NULL,
+  created_by VARCHAR NOT NULL,
+  content TEXT
+);
