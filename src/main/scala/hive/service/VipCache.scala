@@ -36,7 +36,7 @@ object VipCache extends LazyLogging {
         }
     }
 
-    def readFile(f: File): Seq[String] = {
+    def readFile[R](handleLines: Seq[String] => R)(f: File): R = {
       logger.info(s"Reading file ${f.getName}, this may take a while...")
       Thread.sleep((Random.nextInt(10) + 1) * 1000)
       if (!f.getName.endsWith(".csv")) {
@@ -44,7 +44,7 @@ object VipCache extends LazyLogging {
         throw new IllegalArgumentException()
       }
       logger.debug(s"Finished reading file ${f.getName}")
-      loadFile(f.getAbsolutePath)
+      handleLines(loadFile(f.getAbsolutePath))
     }
 
     require(path.nonEmpty, "Cannot read VIP config files from empty path")
@@ -55,41 +55,44 @@ object VipCache extends LazyLogging {
     logger.debug(s"Loading VPI user files from $path...")
     val vipUsers: Seq[VipUser] = getFiles(path)
       .filter(f => f.isFile && f.getName.startsWith("users."))
-      .flatMap(readFile)
-      .filter(l => !l.startsWith("#") && l.nonEmpty)
-      .map { line =>
-        line.split(",").map(_.trim) match {
-          case Array(id, name) => VipUser(id, name)
-          case _               => throw new Exception(s"Found illegal line '$line'.")
-        }
-      }
+      .flatMap(readFile { lines =>
+        lines.filter(l => !l.startsWith("#") && l.nonEmpty)
+          .map { line =>
+            line.split(",").map(_.trim) match {
+              case Array(id, name) => VipUser(id, name)
+              case _ => throw new Exception(s"Found illegal line '$line'.")
+            }
+          }
+      })
 
 
     logger.debug(s"Loading VIP path files from $path...")
     val pathFiles = getFiles(path)
       .filter(f => f.isFile && f.getName.startsWith("paths."))
-      .flatMap(readFile)
-      .filter(l => !l.startsWith("#") && l.nonEmpty)
-      .map(_.split(",").map(_.trim))
-      .map {
-        case Array(userId, path) => VipPath(userId, path)
-        case x                   => throw new Exception(s"Illegal line '${x.mkString(",")}'")
-      }
+      .flatMap(readFile { lines =>
+        lines.filter(l => !l.startsWith("#") && l.nonEmpty)
+          .map(_.split(",").map(_.trim))
+          .map {
+            case Array(userId, path) => VipPath(userId, path)
+            case x => throw new Exception(s"Illegal line '${x.mkString(",")}'")
+          }
+      })
 
     logger.debug(s"Loading VIP file files from $path...")
     val fileFiles = getFiles(path)
       .filter(f => f.isFile && f.getName.startsWith("files."))
-      .flatMap(readFile)
-      .filter(l => !l.startsWith("#") && l.nonEmpty)
-      .map { line =>
-        logger.debug(s"Parsing line: $line")
-        line
-      }
-      .map(_.split(",").map(_.trim))
-      .map {
-        case Array(userId, path, filename) => VipFile(userId, path, filename)
-        case x                             => throw new Exception(s"Illegal line '${x.mkString(",")}'")
-      }
+      .flatMap(readFile { lines =>
+        lines.filter(l => !l.startsWith("#") && l.nonEmpty)
+          .map { line =>
+            logger.debug(s"Parsing line: $line")
+            line
+          }
+          .map(_.split(",").map(_.trim))
+          .map {
+            case Array(userId, path, filename) => VipFile(userId, path, filename)
+            case x => throw new Exception(s"Illegal line '${x.mkString(",")}'")
+          }
+      })
 
     logger.debug("All files loaded.")
     logger.debug("Starting aggregation...")
@@ -120,7 +123,7 @@ object VipCache extends LazyLogging {
       .map { case (k, v) => (k, v.map(_._2)) }
 
     val raw = getFiles(path).filter(f => f.isFile && (f.getName.startsWith("users.") || f.getName.startsWith("paths.") || f.getName.startsWith("files.")))
-      .flatMap(readFile)
+      .flatMap(readFile(l => l))
       .mkString("\n")
     val digest = new BigInteger(1, MessageDigest.getInstance("MD5").digest(raw.getBytes)).toString(16)
     val pw = new PrintWriter(new File("digest"))

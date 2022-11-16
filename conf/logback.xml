@@ -4,7 +4,7 @@
               class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>
-                %date{yyyy-MM-dd'T'HH:mm:ss.SSS} [%level] %logger{1} - %msg%n
+                %date{yyyy-MM-dd'T'HH:mm:ss.SSS} [%level] [%thread] %logger{1} - %msg%n
             </pattern>
         </encoder>
     </appender>
