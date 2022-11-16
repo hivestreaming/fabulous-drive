@@ -34,7 +34,7 @@ class FilesService(implicit repo: FilesRepository, vc: VipCache) {
     repo.get(request.path)
       .flatMap(EitherT.fromOption[IO](_, NotFoundError() : AppError))
       .flatMap(file => EitherT.cond[IO](
-        vc.canAccessFile(request.user, file.path),
+        vc.canAccessPath(request.user, file.path) && vc.canAccessFile(request.user, file.name),
         file,
         NotAuthorizedError()
       ))
