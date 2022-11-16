@@ -25,7 +25,7 @@ object ServerBuilder {
     )
 
     BlazeServerBuilder[IO]
-      .bindHttp(host = "0.0.0.0", port = 8080)
+      .bindHttp(host = "0.0.0.0", port = 80)
       .withHttpApp(router.orNotFound)
       .resource
   }

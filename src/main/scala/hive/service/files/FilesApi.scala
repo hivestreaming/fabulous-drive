@@ -4,7 +4,7 @@ import cats.effect.IO
 import hive.service.{AppError, BaseApi}
 import org.http4s.HttpRoutes
 import sttp.model.StatusCode
-import sttp.tapir.{Endpoint, PublicEndpoint}
+import sttp.tapir.PublicEndpoint
 import sttp.tapir.generic.auto.schemaForCaseClass
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 
@@ -13,6 +13,7 @@ class FilesApi(implicit service: FilesService) extends BaseApi {
   val getFile: PublicEndpoint[GetFileRequest, AppError, FileModel, Any] =
     baseEndpoint
       .tag("files")
+      .description("Returns an existing file by id")
       .in(header[String]("X-USER"))
       .in("file" / path[String]("id"))
       .mapInTo[GetFileRequest]
@@ -22,6 +23,7 @@ class FilesApi(implicit service: FilesService) extends BaseApi {
   val getDir: PublicEndpoint[GetFileRequest, AppError, Directory, Any] =
     baseEndpoint
       .tag("files")
+      .description("Lists existing files in a path")
       .in(header[String]("X-USER"))
       .in("files" and query[String]("path"))
       .mapInTo[GetFileRequest]
@@ -31,6 +33,7 @@ class FilesApi(implicit service: FilesService) extends BaseApi {
   val createFile: PublicEndpoint[CreateFileRequest, AppError, Unit, Any] =
     baseEndpoint
       .tag("files")
+      .description("Creates a file in the specified path")
       .in("files")
       .in(header[String]("X-USER"))
       .in(jsonBody[CreateFilePayload])
