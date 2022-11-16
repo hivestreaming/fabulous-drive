@@ -7,12 +7,23 @@ ThisBuild / organizationName := "Hive"
 
 lazy val root = (project in file("."))
   .settings(
-    name := "Files Service",
+    name := "files-service",
     libraryDependencies ++=
       cats ++
       circe ++
       database ++
       logging ++
       httpService ++
-      scalaTest
+      scalaTest,
+
+    assembly / test := {},
+    assembly / assemblyMergeStrategy := {
+      case PathList("org", "slf4j", "impl", ps @ _*) => MergeStrategy.first
+      case "logback.xml"                             => MergeStrategy.last
+      case x if x endsWith "module-info.class"       => MergeStrategy.discard
+      case x =>
+        val oldStrategy = (assembly / assemblyMergeStrategy).value
+        oldStrategy(x)
+    },
+    assembly / assemblyOutputPath := target.value / "jarfiles" / s"${name.value}.jar"
   )
