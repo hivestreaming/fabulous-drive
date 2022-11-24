@@ -14,12 +14,13 @@ object Main extends IOApp with LazyLogging {
   case class AppConfig(db: DbConfig, vipFilesPath: String)
 
   override def run(args: List[String]): IO[ExitCode] = {
+    val vc = new VipCache
     val resources = for {
-      conf  <- loadConfig()
-      vc    <- VipCache(conf.vipFilesPath)
-      _     <- runDbMigrations(conf.db)
-      tx    <- DbTransactor(conf.db)
-      -     <- createServer(tx, vc)
+      conf <- loadConfig()
+      tx   <- DbTransactor(conf.db)
+      -    <- createServer(tx, vc)
+      _    <- vc.load(conf.vipFilesPath)
+      _    <- runDbMigrations(conf.db)
     } yield {}
 
     resources.useForever
