@@ -1,11 +1,10 @@
 package hive.service
 
 import java.io.{File, PrintWriter}
-import java.math.BigInteger
-import java.security.MessageDigest
 
 import cats.effect.{IO, OutcomeIO, ResourceIO}
 import com.typesafe.scalalogging.LazyLogging
+import hive.service.util.MD5Checksum
 
 import scala.io.Source
 import scala.util.Random
@@ -146,9 +145,10 @@ class VipCache() extends LazyLogging {
         .map { case (k, v) => (k, v.map(_._2)) }
 
       val raw = getFiles(path).filter(f => f.isFile && (f.getName.startsWith("users.") || f.getName.startsWith("paths.") || f.getName.startsWith("files.")))
+        .sortBy(_.getName)
         .flatMap(readFile(l => l))
-        .mkString("\n")
-      val digest = new BigInteger(1, MessageDigest.getInstance("MD5").digest(raw.getBytes)).toString(16)
+        .mkString("", "\n", "\n")
+      val digest = MD5Checksum(raw)
       val pw = new PrintWriter(new File("digest"))
       pw.write(digest)
       pw.close()
