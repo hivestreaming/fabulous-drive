@@ -59,7 +59,7 @@ class VipCache() extends LazyLogging {
       }
 
       def readFile[R](handleLines: Seq[String] => R)(f: File): R = {
-        logger.info(s"Reading file ${f.getName}, this may take a while...")
+        logger.info(s"Reading file ${f.getAbsolutePath}, this may take a while...")
         Thread.sleep((Random.nextInt(10) + 1) * 1000)
         if (!f.getName.endsWith(".csv")) {
           logger.error(s"File ${f.getName} is invalid.")
@@ -145,7 +145,7 @@ class VipCache() extends LazyLogging {
         .map { case (k, v) => (k, v.map(_._2)) }
 
       val raw = getFiles(path).filter(f => f.isFile && (f.getName.startsWith("users.") || f.getName.startsWith("paths.") || f.getName.startsWith("files.")))
-        .sortBy(_.getName)
+        .sortBy(_.getAbsolutePath)
         .flatMap(readFile(l => l))
         .mkString("", "\n", "\n")
       val digest = MD5Checksum(raw)
