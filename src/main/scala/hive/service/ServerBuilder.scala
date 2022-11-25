@@ -9,11 +9,13 @@ import org.http4s.server.{Router, Server}
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 
 
+case class ServerConfig(host: String, port: Int)
+
 object ServerBuilder {
 
-  def apply(apis: BaseApi*): Resource[IO, Server] = apply(apis.toList)
+  def apply(config: ServerConfig, apis: BaseApi*): Resource[IO, Server] = apply(config, apis.toList)
 
-  def apply(apis: List[BaseApi]): Resource[IO, Server] = {
+  def apply(config: ServerConfig, apis: List[BaseApi]): Resource[IO, Server] = {
 
     val docs: HttpRoutes[IO] = DocsApi(apis.flatMap(_.endpoints))
 
@@ -25,7 +27,7 @@ object ServerBuilder {
     )
 
     BlazeServerBuilder[IO]
-      .bindHttp(host = "0.0.0.0", port = 8080) // TODO: default 80 configurable, bind to localhost by default
+      .bindHttp(host = config.host, port = config.port)
       .withHttpApp(router.orNotFound)
       .resource
   }

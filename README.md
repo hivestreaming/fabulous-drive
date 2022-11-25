@@ -4,8 +4,13 @@ This is the service that handles files for the fantastic drive.
 It keeps files so that our users don't have to waste their precious hard drive in trivial things like medical records and tax forms.
 Files are publicly accessible because we trust our users to be law-abiding citizens that don't have anything to hide.
 However, we understand that there are some special cases, so we have a few files and paths inside the system that require VIP access.
+
+## VIP access config
+
 The configuration for VIP access is loaded during service start up from a folder provided in an environment variables.
-The current VIP configuration can be found in [/conf/vip](/conf/vip).
+The VIP configuration used for testing can be found in [/conf/vip](/conf/vip).
+
+Once the service has finished loading the config, it will create a file named `digest` with the MD5 checksum of all loaded files.
 
 ## Required infrastructure
 
@@ -19,6 +24,10 @@ To run the service, a bunch of environment variables are required:
 - `DB_PORT`: port for the PostgreSQL database.
 - `DB_USER`: username for the PostgreSQL database.
 - `DB_PASS`: password for the PostgreSQL database.
+
+The following variables are optional:
+- `SERVER_HOST`: defaults to `localhost`.
+- `SERVER_PORT`: defaults to `80`.
 
 ## Plugins
 
