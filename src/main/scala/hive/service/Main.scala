@@ -9,17 +9,20 @@ import org.flywaydb.core.Flyway
 import org.flywaydb.core.api.output.MigrateResult
 import org.http4s.server.Server
 
+import scala.concurrent.duration._
+
 object Main extends IOApp with LazyLogging {
 
-  case class AppConfig(db: DbConfig, vipFilesPath: String)
+  case class AppConfig(db: DbConfig, vipFilesPath: String, server: ServerConfig)
 
   override def run(args: List[String]): IO[ExitCode] = {
+    val vc = new VipCache
     val resources = for {
-      conf  <- loadConfig()
-      vc    <- VipCache(conf.vipFilesPath)
-      _     <- runDbMigrations(conf.db)
-      tx    <- DbTransactor(conf.db)
-      -     <- createServer(tx, vc)
+      conf <- loadConfig()
+      tx   <- DbTransactor(conf.db)
+      -    <- createServer(conf.server, tx, vc)
+      _    <- vc.load(conf.vipFilesPath)
+      _    <- runDbMigrations(conf.db)
     } yield {}
 
     resources.useForever
@@ -36,23 +39,30 @@ object Main extends IOApp with LazyLogging {
           port = sys.env("DB_PORT").toInt,
           database = sys.env("DB_NAME")
         ),
-        vipFilesPath = sys.env("VIP_CONFIG_PATH")
+        vipFilesPath = sys.env("VIP_CONFIG_PATH"),
+        server = ServerConfig(
+          host = sys.env.getOrElse("SERVER_HOST", "127.0.0.1"),
+          port = sys.env.getOrElse("SERVER_PORT", "80").toInt
+        )
       )
     })
   }
 
-  private def runDbMigrations(config: DbConfig): Resource[IO, MigrateResult] = {
-    Resource.eval(IO {
-      logger.info("Starting DB migration...")
+  private def runDbMigrations(config: DbConfig): Resource[IO, MigrateResult] = Resource.eval {
+    import scala.language.postfixOps
+
+    IO(logger.info("Starting DB migration...")) >>
+    IO.sleep(5 seconds) >>
+    IO {
       Flyway.configure()
         .connectRetries(10)
         .dataSource(s"jdbc:postgresql://${config.host}:${config.port}/${config.database}", config.user, config.pass)
         .load()
         .migrate()
-    })
+    }
   }
 
-  private def createServer(tx: Transactor[IO], vc: VipCache): Resource[IO, Server] = {
+  private def createServer(config: ServerConfig, tx: Transactor[IO], vc: VipCache): Resource[IO, Server] = {
     logger.info("Bootstrapping service...")
 
     implicit val vipCache: VipCache = vc
@@ -65,7 +75,7 @@ object Main extends IOApp with LazyLogging {
 
     implicit lazy val healthApi: HealthApi = new HealthApi
 
-    ServerBuilder(filesApi, healthApi)
+    ServerBuilder(config, filesApi, healthApi)
   }
 
 }
