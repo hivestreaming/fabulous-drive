@@ -21,6 +21,8 @@ lazy val root = (project in file("."))
       case PathList("org", "slf4j", "impl", ps @ _*) => MergeStrategy.first
       case "logback.xml"                             => MergeStrategy.last
       case x if x endsWith "module-info.class"       => MergeStrategy.discard
+      case PathList("META-INF", "maven", "org.webjars", "swagger-ui", "pom.properties") =>
+        MergeStrategy.singleOrError
       case x =>
         val oldStrategy = (assembly / assemblyMergeStrategy).value
         oldStrategy(x)
