@@ -44,7 +44,8 @@ class FilesRepository(implicit db: DbExecutor) extends LazyLogging {
            |  ${file.createdAt},
            |  ${file.createdBy},
            |  ${file.content}
-           |)""".stripMargin
+           |)
+           |ON CONFLICT (path, name) DO NOTHING""".stripMargin
         .update
         .run
     }

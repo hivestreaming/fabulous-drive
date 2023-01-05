@@ -12,6 +12,7 @@
     <logger name="org.http4s.server" level="INFO"/>
     <logger name="org.http4s.blaze.channel.nio1" level="ERROR"/>
     <logger name="org.flywaydb" level="WARN"/>
+    <logger name="hive.service.VipCache" level="INFO"/>
 
     <root level="INFO">
         <appender-ref ref="STDOUT" />

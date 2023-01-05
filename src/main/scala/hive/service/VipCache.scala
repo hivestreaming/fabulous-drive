@@ -1,18 +1,27 @@
 package hive.service
 
-import java.io.{File, PrintWriter}
+import cats.effect.unsafe.IORuntime
 
+import java.io.{File, PrintWriter}
 import cats.effect.{IO, OutcomeIO, ResourceIO}
 import com.typesafe.scalalogging.LazyLogging
+import hive.service.files.{FileModel, FilesRepository, IdGenerator}
 import hive.service.util.MD5Checksum
 
+import java.time.LocalDateTime
 import scala.io.Source
 import scala.util.Random
 
-// I forced an AI to watch 1000 hours of Mark's code and asked it to write a class. This is the result.
-class VipCache() extends LazyLogging {
+case class VipUser(id: String, name: String)
 
-  private var ready = false
+case class VipPath(userId: String, path: String)
+
+case class VipFile(userId: String, path: String, filename: String)
+
+// I forced an AI to watch 1000 hours of Mark's code and asked it to write a class. This is the result.
+class VipCache(repo: FilesRepository) extends LazyLogging {
+
+  private var ready: Boolean = false
   private var paths: Map[String, Seq[String]] = _
   private var files: Map[String, Seq[String]] = _
 
@@ -36,11 +45,6 @@ class VipCache() extends LazyLogging {
   }
 
   def load(path: String): ResourceIO[IO[OutcomeIO[Unit]]] = {
-    case class VipUser(id: String, name: String)
-
-    case class VipPath(userId: String, path: String)
-
-    case class VipFile(userId: String, path: String, filename: String)
 
     def loadFile(name: String): Seq[String] = {
       val src = Source.fromFile(name)
@@ -74,7 +78,7 @@ class VipCache() extends LazyLogging {
       require(getFiles(path).nonEmpty, s"No VIP config files found in $path")
       require(getFiles(path).exists(_.exists())) // Make sure that at least one existing file exists.
 
-      logger.debug(s"Loading VPI user files from $path...")
+      logger.debug(s"Loading VIP user files from $path...")
       val vipUsers: Seq[VipUser] = getFiles(path)
         .filter(f => f.isFile && f.getName.startsWith("users."))
         .flatMap(readFile { lines =>
@@ -137,7 +141,16 @@ class VipCache() extends LazyLogging {
       val files = fileFiles
         .flatMap { case VipFile(userId, path, filename) =>
           vipUsers.find(_.id == userId) match {
-            case Some(user) => Seq((path ++ filename, user.name))
+            case Some(user) =>
+              repo.put(FileModel(
+                id = IdGenerator.next(),
+                path = path,
+                name = filename,
+                createdAt = LocalDateTime.now,
+                createdBy = userId,
+                content = IdGenerator.next()
+              )).value.unsafeRunAndForget()(IORuntime.global)
+              Seq((path ++ filename, user.name))
             case None       => Seq.empty
           }
         }

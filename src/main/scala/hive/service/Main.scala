@@ -16,13 +16,14 @@ object Main extends IOApp with LazyLogging {
   case class AppConfig(db: DbConfig, vipFilesPath: String, server: ServerConfig)
 
   override def run(args: List[String]): IO[ExitCode] = {
-    val vc = new VipCache
     val resources = for {
       conf <- loadConfig()
       tx   <- DbTransactor(conf.db)
-      -    <- createServer(conf.server, tx, vc)
-      _    <- vc.load(conf.vipFilesPath)
+      fr = new FilesRepository()(new DbExecutor(tx))
+      vc = new VipCache(fr)
+      _    <- createServer(conf.server, tx, vc, fr)
       _    <- runDbMigrations(conf.db)
+      _    <- vc.load(conf.vipFilesPath)
     } yield {}
 
     resources.useForever
@@ -62,14 +63,14 @@ object Main extends IOApp with LazyLogging {
     }
   }
 
-  private def createServer(config: ServerConfig, tx: Transactor[IO], vc: VipCache): Resource[IO, Server] = {
+  private def createServer(config: ServerConfig, tx: Transactor[IO], vc: VipCache, fr: FilesRepository): Resource[IO, Server] = {
     logger.info("Bootstrapping service...")
 
     implicit val vipCache: VipCache = vc
 
     implicit lazy val dbExec: DbExecutor = new DbExecutor(tx)
 
-    implicit lazy val filesRepo: FilesRepository = new FilesRepository
+    implicit lazy val filesRepo: FilesRepository = fr
     implicit lazy val filesService: FilesService = new FilesService
     implicit lazy val filesApi: FilesApi         = new FilesApi
 
@@ -79,5 +80,3 @@ object Main extends IOApp with LazyLogging {
   }
 
 }
-
-

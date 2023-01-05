@@ -1,6 +1,8 @@
 /.bsp/
 /.idea/
+metals.sbt
 /.metals/
+**/.bloop/
 /.vscode/
 target/
 digest

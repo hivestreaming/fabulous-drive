@@ -10,7 +10,6 @@ import sttp.tapir.swagger.bundle.SwaggerInterpreter
 object DocsApi {
 
   private val swaggerUiOptions: SwaggerUIOptions = SwaggerUIOptions.default.copy(
-    contextPath = List("docs"),
     pathPrefix = List("service")
   )
 
